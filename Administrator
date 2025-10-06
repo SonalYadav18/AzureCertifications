@@ -141,3 +141,82 @@ Detective control — identifies but doesn’t block existing noncompliant resou
 | **Enforcement type**             | Preventive (denies noncompliant requests) | Detective (flags noncompliant resources)        |
 | **Effect on existing resources** | Evaluated immediately                     | Marked noncompliant after scan                  |
 | **Typical use case**             | Governance during provisioning            | Assessing and remediating existing environments |
+
+| Concept              | Purpose                                                          | Example                                   |
+| -------------------- | ---------------------------------------------------------------- | ----------------------------------------- |
+| **Enforcement Mode** | Controls whether a policy actively blocks/deploys or just audits | `DoNotEnforce` for testing                |
+| **Managed Identity** | Grants permissions for automatic deployment or modification      | Used with `DeployIfNotExists` or `Modify` |
+| **System-assigned**  | Identity created automatically for the assignment                | Self-contained                            |
+| **User-assigned**    | Reusable identity shared across policies                         | Centralized management                    |
+
+⚙️ 1. What Is a Policy Exemption?
+A policy exemption is a resource in Azure that tells Azure Policy to ignore a specific policy or initiative for certain resources.
+It behaves similarly to an excluded scope, but you define it after the policy has been assigned.
+
+📌 Key difference:
+Excluded scope = defined during assignment.
+Exemption = defined after assignment, as a separate child resource under the policy or resource hierarchy.
+
+| Exclusion                            | Exemption                                           |
+| ------------------------------------ | --------------------------------------------------- |
+| Defined **during** policy assignment | Created **after** assignment                        |
+| Applies to all future evaluations    | Can be applied to existing resources selectively    |
+| Managed by policy admins             | Can be granted by resource owners (with permission) |
+| No expiration support                | Supports expiration and categorization              |
+
+| Concept           | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| **Purpose**       | Temporarily or permanently exclude a resource from policy enforcement    |
+| **Created when?** | After policy assignment                                                  |
+| **Where stored?** | As a child resource under the policy hierarchy                           |
+| **Categories**    | Mitigated (policy intent met otherwise), Waiver (noncompliance accepted) |
+| **Effect**        | Resource ignored in compliance scans                                     |
+| **Extras**        | Can include expiration, justification, and category metadata             |
+
+✅ Attestations in Azure Policy (Simplified Explanation):
+Attestations are manual confirmations of compliance used within Azure Policy. They help when compliance cannot be automatically verified by Azure (for example, checking if a document or process exists).
+
+Here’s how they work:
+When a manual policy is assigned to a scope (like a subscription or resource group), each resource under that scope needs an attestation.
+The attestation confirms that the resource meets the policy’s intent — even if Azure can’t check it automatically.
+Once an attestation is submitted, it updates the compliance state of that resource to Compliant.
+One attestation is required per manual policy assignment per resource.
+
+💡 Example:
+Suppose there’s a policy requiring “Security review documentation for all VMs.”
+Azure can’t automatically check that, so you create a manual policy.
+Then, for each VM, you submit an attestation confirming the review has been done.
+
+In short — attestations = manual compliance proof for resources under manual policy assignments.
+
+✅ Remediations in Azure Policy (Simplified Explanation):
+Remediation tasks are used to fix noncompliant resources automatically so they meet the policy requirements.
+
+Here’s how they work:
+When you assign a policy with deployIfNotExists or modify effect, Azure Policy can automatically correct resources that don’t comply.
+If existing resources are already noncompliant, you can create a remediation task to bring them into compliance.
+Any newly created or updated resources that fall under that policy scope are automatically remediated (fixed) during deployment.
+
+💡 Example:
+If a policy says “All storage accounts must have encryption enabled” —
+and some storage accounts don’t —
+a remediation task can automatically enable encryption on those noncompliant storage accounts.
+
+🔧 Key points:
+Works only with modify or deployIfNotExists effects.
+Can be triggered manually (via remediation task) or automatically for new resources.
+Often uses a managed identity to perform changes on the resources.
+
+Managed identity = Azure-managed service account.
+Two types: System-assigned and User-assigned.
+Used for secure authentication without credentials.
+Works for VMs, Functions, Policies, App Services, and more.
+Essential for remediation tasks, automated access, and cross-service communication.
+
+| Feature   | System-assigned             | User-assigned                      |
+| --------- | --------------------------- | ---------------------------------- |
+| Scope     | Single resource only        | Multiple resources                 |
+| Lifecycle | Tied to resource            | Independent                        |
+| Creation  | Automatically with resource | Manually created first             |
+| Deletion  | Deleted with resource       | Stays alive until manually deleted |
+| Use case  | Simple, one-off access      | Shared access across resources     |
