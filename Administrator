@@ -1,0 +1,143 @@
+### What is SKU?
+SKU stands for Stock Keeping Unit — it’s Microsoft’s way of saying the pricing tier or edition of a resource.
+In Azure, almost every resource type (VMs, Storage Accounts, App Service Plans, Databases, etc.) has different SKUs that determine:
+Performance level (e.g., how powerful a VM is, how fast storage is)
+Features available (e.g., redundancy, geo-replication)
+Cost (higher SKUs usually cost more)
+
+| Feature           | AD DS                                    | Microsoft Entra ID                   |
+| ----------------- | ---------------------------------------- | ------------------------------------ |
+| Object types      | Users, Groups, Computers, Printers, etc. | Users, Groups, Devices, Applications |
+| Computer class    | ✅ Yes                                    | ❌ No                                 |
+| Device management | Domain-joined                            | Device-registered / Azure AD joined  |
+| Extensibility     | Possible but complex                     | Easy, reversible                     |
+| Schema updates    | Controlled, more static                  | Cloud-managed, flexible              |
+
+Device Writeback is a feature in Microsoft Entra Connect that allows devices registered in Microsoft Entra ID (cloud) to be written back into your on-premises Active Directory (AD DS).
+
+| **Error / Topic**                                                           | **What It Means**                                                                 | **Why It Happens**                                                                             | **How to Fix / Action**                                                                                       |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **1️⃣ Not enough licenses — `CountViolation`**                              | The group or user needs a license, but there aren’t enough available.             | All available licenses for that SKU are already assigned.                                      | Purchase more licenses or unassign unused ones. Then reprocess the group/user.                                |
+| **2️⃣ Service plans that conflict — `MutuallyExclusiveViolation`**          | Two service plans can’t coexist under the same user.                              | Some products have overlapping or mutually exclusive plans (e.g., two different M365 bundles). | Review service plans, remove conflicting ones, and reassign.                                                  |
+| **3️⃣ Other products depend on this license — `DependencyViolation`**       | A dependent license is being removed, breaking another product’s functionality.   | Removing one plan disables a required dependency (e.g., Exchange needed by Teams).             | Keep the required base plan active or disable dependent features first.                                       |
+| **4️⃣ Usage location isn’t allowed — `ProhibitedInUsageLocationViolation`** | The assigned license isn’t available in the user’s country.                       | Some services aren’t offered in certain regions.                                               | Update the user’s **Usage Location** attribute to a supported country before assigning.                       |
+| **5️⃣ Duplicate proxy addresses**                                           | Two users have the same **email alias (proxyAddress)**.                           | Duplicate mail aliases conflict with Exchange Online or mail-enabled groups.                   | Correct duplicates in **ProxyAddresses** via Entra or Exchange Admin Center. Then force license reprocessing. |
+| **6️⃣ Microsoft Entra Mail and ProxyAddresses attribute change**            | Assigning or updating licenses triggers recalculation of mail-related attributes. | License updates cause Entra ID to recalculate attributes like `mail` or `proxyAddresses`.      | Normal behavior. Monitor for unintended address overwrites if sync is involved.                               |
+| **7️⃣ `LicenseAssignmentAttributeConcurrencyException` in audit logs**      | User received duplicate license assignment requests concurrently.                 | The user belongs to multiple licensed groups with the same license SKU.                        | No manual action needed. Entra ID retries automatically and resolves it.                                      |
+| **8️⃣ More than one product license assigned to a group**                   | The same group has multiple overlapping licenses.                                 | Admin assigned multiple SKUs with overlapping services to one group.                           | Simplify — assign only one product license per group for clarity.                                             |
+| **9️⃣ When a licensed group is deleted**                                    | Users lose licenses inherited from that group.                                    | Deletion removes license inheritance.                                                          | Ensure licenses are reassigned via another group or individually before deleting the licensed group.          |
+| **🔟 Manage licenses for products with prerequisites**                      | Some services depend on other base services.                                      | Example: Intune requires Azure AD Premium.                                                     | Assign prerequisite licenses before assigning dependent ones.                                                 |
+| **1️⃣1️⃣ Force the group license process to resolve errors**                | Re-triggers license evaluation for a group.                                       | Useful when issues like CountViolation or Proxy errors occur.                                  | Go to **Group > Licenses > Reprocess** in Entra ID.                                                           |
+| **1️⃣2️⃣ Force the user license process to resolve errors**                 | Re-triggers license assignment for a user.                                        | Fixes temporary sync or dependency issues.                                                     | Go to **User > Licenses > Reprocess**.                                                                        |
+| **1️⃣3️⃣ Migrate users with individual licenses to group licenses**         | Moves manually assigned licenses to group-based assignment.                       | For centralized license control.                                                               | Remove individual licenses, add user to appropriate licensed group. Ensure group has all required services.   |
+| **1️⃣4️⃣ Change license assignments for a user or group**                   | Modify what products or service plans a user/group gets.                          | Needed when upgrading/downgrading plans.                                                       | Use **Microsoft Entra admin center → Licenses → Assignments** or PowerShell commands.                         |
+
+
+
+| Term                      | Description                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Policy Definition**     | A rule that enforces or audits a specific condition (e.g., “VMs must use managed disks”).                    |
+| **Initiative Definition** | A collection (bundle) of multiple policies designed to meet a goal (e.g., “Enable ISO 27001 compliance”).    |
+| **Assignment**            | The process of applying a policy or initiative to a scope (management group, subscription, resource group).  |
+| **Scope**                 | Where the policy applies — can be at management group, subscription, or resource group level.                |
+| **Parameters**            | Variables used in policies/initiatives so you can customize behavior (e.g., specify a location or tag name). |
+
+
+⚙️ 1. Control Plane
+
+What it is:
+The control plane is the management layer of Azure.
+It’s where you create, configure, and delete Azure resources.
+Operations here go through Azure Resource Manager (ARM).
+
+Examples:
+Creating a new Azure Storage account.
+Updating a VM’s size or tags.
+Assigning a role to a user (RBAC).
+Setting up a network security group (NSG).
+
+APIs involved:
+management.azure.com (via ARM)
+
+Security:
+Controlled by Azure RBAC and management permissions at the resource/subscription level.
+
+📦 2. Data Plane
+
+What it is:
+The data plane lets you interact directly with the resource once it’s created — to use or retrieve data from it.
+
+Examples:
+Uploading or downloading blobs from an Azure Storage account.
+Querying a database in Azure SQL.
+Accessing a Key Vault secret.
+Reading messages from an Event Hub.
+
+APIs involved:
+Resource-specific endpoints like *.blob.core.windows.net, *.database.windows.net, etc.
+
+Security:
+Controlled by resource-level access, such as:
+
+Shared keys
+SAS tokens
+Azure AD authentication
+Managed identities
+
+⚙️ Azure Policy Operation Scenarios
+🌱 1. Greenfield (Policy-First Scenario)
+💡 Meaning:
+You already have Azure Policy defined and active before resources are created or modified.
+When a user tries to create or update a resource, the policy immediately evaluates the request.
+
+🧩 How it works:
+A user (or system) sends a request to create or update a resource via Azure Resource Manager (ARM).
+ARM processes the request through several layers:
+RBAC (Role-Based Access Control) — checks if the user has the right permissions.
+Azure Policy — checks if the resource complies with the defined policies.
+If the user lacks permission → request fails at RBAC stage.
+If the user passes RBAC → Azure Policy evaluates the request.
+For updates, Azure Policy needs the full resource state, so it merges:
+The current state (existing configuration),
+With the requested changes (delta),
+And evaluates the target state against the policies.
+
+✅ Example:
+A policy restricts resources to West Europe.
+When a user tries to create a resource in East US, the policy blocks it immediately.
+
+⚙️ Use Case:
+Policy-first environments
+Preventive control — stops noncompliant resources from being created
+
+🏗️ 2. Brownfield (Resource-First Scenario)
+💡 Meaning:
+You already have existing resources, and you apply a new Azure Policy later.
+The policy doesn’t block anything initially — it evaluates compliance afterward.
+
+🧩 How it works:
+The policy is assigned after resources already exist.
+Azure Policy runs a compliance scan:
+Automatically every 24 hours, or
+Manually triggered by an administrator.
+The scan reads all existing resources within the policy’s scope.
+It then updates the compliance state (Compliant / Noncompliant) for each resource.
+
+✅ Example:
+
+A new policy requires all resources to be in West Europe.
+Existing East US resources aren’t deleted.
+They’re marked as noncompliant.
+Future creations in East US will fail due to the policy.
+
+⚙️ Use Case:
+Resource-first environments
+Detective control — identifies but doesn’t block existing noncompliant resources
+
+| Feature                          | **Greenfield (Policy-First)**             | **Brownfield (Resource-First)**                 |
+| -------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| **When policy is applied**       | Before resource creation                  | After resources already exist                   |
+| **Evaluation trigger**           | On each create/update request             | Compliance scan (24h / manual)                  |
+| **Enforcement type**             | Preventive (denies noncompliant requests) | Detective (flags noncompliant resources)        |
+| **Effect on existing resources** | Evaluated immediately                     | Marked noncompliant after scan                  |
+| **Typical use case**             | Governance during provisioning            | Assessing and remediating existing environments |
