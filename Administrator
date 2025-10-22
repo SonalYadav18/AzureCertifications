@@ -376,6 +376,24 @@ You can use Azure Data Box Disk to request solid-state disks (SSDs) from Microso
 Changes to the storage tier. If you change the account storage tier from Cool to Hot, you incur a charge equal to reading all the data existing in the storage account. 
 Changing the account storage tier from Hot to Cool incurs a charge equal to writing all the data into the Cool tier (GPv2 accounts only).
 
+###What is an NSG (Network Security Group)?
+Think of an NSG as a software firewall in Azure.
+It contains rules that allow or deny traffic.
+You can apply it to:
+Subnets – all VMs inside the subnet are affected.
+Network Interfaces (NICs) – affects only that VM’s network interface.
+
+2️⃣ How NSGs work in a VM scenario
+Suppose you have a VM in Subnet-A:
+If NSG is applied to the subnet, all VMs in that subnet inherit those rules.
+If NSG is applied to the VM’s NIC, only that VM is affected.
+If both exist, the rules are combined, and Azure applies the most restrictive result.
+
+3️⃣ Between different subnets or VNets
+NSG rules only control traffic going in/out of the subnet or VM NIC.
+They cannot directly filter traffic between different VNets, because traffic between VNets goes through peering or VPN gateways, and NSGs are applied locally at the NIC or subnet.
+However, you can control traffic between subnets in the same VNet by using NSGs on the subnet level.
+
 
 
 
