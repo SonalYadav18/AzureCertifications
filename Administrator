@@ -395,6 +395,43 @@ They cannot directly filter traffic between different VNets, because traffic bet
 However, you can control traffic between subnets in the same VNet by using NSGs on the subnet level.
 
 
+### 🧩 Understanding App Settings in Deployment Slots
+
+In Azure App Service, each web app can have deployment slots — for example:
+Production slot → your live website
+Staging slot → where you test a new version before going live
+Each slot has its own App Settings (key–value pairs that configure how the app runs).
+Examples:
+Database connection strings
+API keys
+Logging levels
+Environment names (Production, Staging, etc.)
+
+| Type                        | Description                                                    | What Happens During a Swap                                         |
+| --------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Slot-specific setting** ✅ | This setting **belongs to a specific slot** and stays with it. | It **does not move** when you swap. Each slot keeps its own value. |
+| **Non-slot setting** ❌      | This setting is **shared between slots**.                      | It **moves** with the app during swap (values get exchanged).      |
+
+| Setting Name             | Value in Staging | Value in Production | Slot Setting? | Behavior During Swap                       |
+| ------------------------ | ---------------- | ------------------- | ------------- | ------------------------------------------ |
+| `DB_CONNECTION`          | test-db          | prod-db             | ✅ Yes         | Each slot keeps its own DB.                |
+| `ASPNETCORE_ENVIRONMENT` | Staging          | Production          | ✅ Yes         | Environment name stays with slot.          |
+| `APP_VERSION`            | v2.0             | v1.0                | ❌ No          | Values are swapped (staging → production). |
+
+So, if you mark a setting as slot-specific, it stays where it is during swap — ensuring your staging app continues using test resources, and your production app keeps using production resources.
+
+🧭 Why This Matters
+When you swap slots:
+Azure exchanges the content and configuration of the slots.
+Slot-specific settings don’t move, which prevents issues like connecting your staging build to the production database.
+This makes deployment safer, faster, and predictable.
+
+✅ In short
+Slot-specific = stays in its own slot (safe for environment differences).
+Non-slot = swaps with your app (good for shared config).
+Use slot-specific settings for things like DBs, API keys, and environment names.
+Use non-slot settings for app-level configurations that should move with your code.
+
 
 
 
